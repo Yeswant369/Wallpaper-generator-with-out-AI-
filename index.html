@@ -1,219 +1,461 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>VividCanvas Pro | Ultra Wallpapers</title>
-
-<script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
-
-<link rel="manifest" href="/manifest.json">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>VividCanvas Pro | Ultra Wallpapers</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <link rel="manifest" href="/manifest.json">
 <meta name="theme-color" content="#000000">
 
-<style>
-:root { --accent:#c084fc; }
-body{
-  font-family:'Plus Jakarta Sans',sans-serif;
-  background:#000;color:#fff;
-  margin:0;overflow:hidden;height:100dvh;
-}
-.glass{
-  background:rgba(15,15,25,.7);
-  backdrop-filter:blur(30px);
-  border:1px solid rgba(255,255,255,.12)
-}
-.style-card{transition:.5s cubic-bezier(.2,1,.3,1);min-width:110px;filter:saturate(.7) brightness(.95)}
-.style-card.active{
-  filter:saturate(1.6) brightness(1.25);
-  transform:translateY(-8px) scale(1.05);
-  border-color:var(--accent);
-  background:rgba(192,132,252,.25);
-  box-shadow:0 15px 40px -10px rgba(192,132,252,.55)
-}
-#mainCanvas{position:fixed;inset:0;z-index:0}
-</style>
+    <style>
+        :root { --accent: #c084fc; }
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #000;
+            color: white;
+            margin: 0;
+            overflow: hidden;
+            height: 100dvh;
+            user-select: none;
+        }
+        .glass {
+            background: rgba(15, 15, 20, 0.7);
+            backdrop-filter: blur(30px);
+            -webkit-backdrop-filter: blur(30px);
+            border: 1px solid rgba(255, 255, 255, 0.12);
+        }
+        .style-card {
+            transition: all 0.5s cubic-bezier(0.2, 1, 0.3, 1);
+            min-width: 110px;
+            filter: saturate(0.6) brightness(0.9);
+        }
+        .style-card.active {
+            filter: saturate(1.5) brightness(1.2);
+            transform: translateY(-8px) scale(1.05);
+            border-color: var(--accent);
+            background: rgba(192, 132, 252, 0.2);
+            box-shadow: 0 15px 40px -10px rgba(192, 132, 252, 0.5);
+        }
+        #mainCanvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+        }
+        .preview-overlay {
+            display: none;
+            pointer-events: none;
+            background: rgba(0,0,0,0.2);
+        }
+        .preview-active .preview-overlay { display: flex; }
+        .preview-active .ui-hide { opacity: 0; pointer-events: none; transform: translateY(30px); }
+        .ui-hide { transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        .hide-scrollbar::-webkit-scrollbar { display: none; }
+        .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        .btn-pop {
+            transition: all 0.3s ease;
+            box-shadow: 0 0 0 rgba(192, 132, 252, 0);
+        }
+        .btn-pop:hover {
+            box-shadow: 0 0 20px rgba(192, 132, 252, 0.4);
+            transform: translateY(-2px);
+        }
+    </style>
 </head>
+<body class="flex flex-col">
 
-<body>
-<canvas id="mainCanvas"></canvas>
+    <canvas id="mainCanvas"></canvas>
 
-<script>
-const canvas=document.getElementById("mainCanvas");
-const ctx=canvas.getContext("2d",{alpha:false});
-let w,h;
-let selected1="Obsidian",selected2="Vortex";
-let seed=Math.random()*99999;
+    <!-- Lock Screen Preview Overlay -->
+    <div id="previewLayer" class="preview-overlay fixed inset-0 z-20 flex-col items-center pt-24 text-white">
+        <div id="clock" class="text-8xl font-thin tracking-tighter mt-12 drop-shadow-2xl">09:41</div>
+        <div id="date" class="text-xl font-semibold opacity-90 mt-1 drop-shadow-lg">Monday, January 12</div>
+        <div class="mt-auto mb-20 flex flex-col items-center gap-8">
+            <div class="flex gap-14">
+                <div class="w-16 h-16 rounded-full bg-black/30 backdrop-blur-2xl flex items-center justify-center border border-white/20 shadow-2xl">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10zM7 12l5-5 5 5-5 5-5-5z"/></svg>
+                </div>
+                <div class="w-16 h-16 rounded-full bg-black/30 backdrop-blur-2xl flex items-center justify-center border border-white/20 shadow-2xl">
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="white"><path d="M12 18l-6-6 1.41-1.41L12 15.17l4.59-4.58L18 12l-6 6z"/></svg>
+                </div>
+            </div>
+            <p class="text-[11px] font-black tracking-[0.5em] uppercase opacity-60 drop-shadow-md">Swipe up to unlock</p>
+        </div>
+    </div>
 
-function rand(s){return Math.sin(s)*10000%1}
+    <!-- Main UI Layer -->
+    <div class="relative z-10 flex flex-col h-full w-full pointer-events-none">
+        
+        <!-- Top Navigation -->
+        <div class="p-6 flex justify-between items-center pointer-events-auto ui-hide">
+            <div>
+                <h1 class="text-2xl font-800 tracking-tighter uppercase italic leading-none text-white">Vivid<span class="text-violet-400">Canvas</span></h1>
+                <p id="seedDisplay" class="text-[9px] text-white/40 font-black tracking-[0.3em] uppercase mt-1">SEED: #88219</p>
+            </div>
+            <div class="flex gap-3">
+                <button id="previewBtn" class="glass w-14 h-14 rounded-2xl flex items-center justify-center hover:bg-white/10 transition-all active:scale-90" title="Preview Mode">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.5"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <button id="downloadBtn" class="glass px-7 py-3 rounded-2xl font-black text-[11px] tracking-[0.15em] flex items-center gap-3 hover:bg-white hover:text-black transition-all active:scale-95 shadow-lg shadow-black/40">
+                    SAVE ARTWORK
+                </button>
+            </div>
+        </div>
 
-// 📱 Detect mobile (safe + simple)
-const IS_MOBILE=/Android|iPhone|iPad/i.test(navigator.userAgent);
+        <!-- Controls Area -->
+        <div class="mt-auto p-6 space-y-6 pointer-events-auto ui-hide bg-gradient-to-t from-black via-black/80 to-transparent pb-12">
+            
+            <div class="space-y-6">
+                <!-- Style Selection 1 -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center px-1">
+                        <label class="text-[10px] uppercase tracking-[0.35em] font-black text-white/50">Base Logic</label>
+                        <span id="label1" class="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Obsidian</span>
+                    </div>
+                    <div id="scroll1" class="flex gap-4 overflow-x-auto hide-scrollbar py-2 px-1"></div>
+                </div>
 
-// 🔥 OLED compensation values
-const SAT_BOOST = IS_MOBILE ? 1.45 : 1.15;
-const BRI_BOOST = IS_MOBILE ? 1.12 : 1.05;
-const CON_BOOST = IS_MOBILE ? 1.10 : 1.05;
+                <!-- Style Selection 2 -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center px-1">
+                        <label class="text-[10px] uppercase tracking-[0.35em] font-black text-white/50">Overlay Layer</label>
+                        <span id="label2" class="text-[10px] font-bold text-violet-400 uppercase tracking-widest">Vortex</span>
+                    </div>
+                    <div id="scroll2" class="flex gap-4 overflow-x-auto hide-scrollbar py-2 px-1"></div>
+                </div>
+            </div>
 
-const STYLES={
+            <div class="flex gap-4 pt-2">
+                <button id="randomizeBtn" class="btn-pop flex-1 bg-violet-600 text-white py-5 rounded-[2rem] font-black uppercase tracking-[0.3em] text-[12px] shadow-2xl active:scale-[0.97] flex items-center justify-center gap-4">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5"><path d="M21 2v6h-6M3 12a9 9 0 0 1 15-6.7L21 8M3 22v-6h6m12-4a9 9 0 0 1-15 6.7L3 16"/></svg>
+                    REGENERATE
+                </button>
+            </div>
+        </div>
+    </div>
 
-Obsidian:{render:(c,w,h,s)=>{
-const bg=c.createLinearGradient(0,0,w,h);
-bg.addColorStop(0,"#05060d");
-bg.addColorStop(.5,"#0b1233");
-bg.addColorStop(1,"#05060d");
-c.fillStyle=bg;c.fillRect(0,0,w,h);
-c.globalCompositeOperation="screen";
-for(let i=0;i<18;i++){
-const x=rand(s+i)*w,y=rand(s+i*2)*h;
-const size=rand(s+i*3)*w;
-const hue=(rand(s)*360+i*30)%360;
-const g=c.createRadialGradient(x,y,0,x,y,size);
-g.addColorStop(0,`hsla(${hue},100%,72%,.65)`);
-g.addColorStop(.4,`hsla(${hue},100%,52%,.28)`);
-g.addColorStop(1,"transparent");
-c.fillStyle=g;c.beginPath();c.arc(x,y,size,0,Math.PI*2);c.fill();
+    <!-- Exit Preview Instruction -->
+    <div id="exitHint" class="fixed bottom-12 left-1/2 -translate-x-1/2 text-[10px] font-black uppercase tracking-[0.6em] text-white/50 opacity-0 transition-opacity duration-700 pointer-events-none z-30 drop-shadow-lg">
+        Tap to Return
+    </div>
+
+    <script>
+        const canvas = document.getElementById('mainCanvas');
+        const ctx = canvas.getContext('2d', { alpha: false });
+        const scroll1 = document.getElementById('scroll1');
+        const scroll2 = document.getElementById('scroll2');
+        const previewBtn = document.getElementById('previewBtn');
+        const randomizeBtn = document.getElementById('randomizeBtn');
+        const downloadBtn = document.getElementById('downloadBtn');
+        const previewLayer = document.getElementById('previewLayer');
+        const exitHint = document.getElementById('exitHint');
+        const seedDisplay = document.getElementById('seedDisplay');
+
+        let width, height;
+        let selected1 = 'Obsidian';
+        let selected2 = 'Vortex';
+        let currentSeed = Math.random() * 99999;
+
+        function sRandom(seed) {
+            const x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+
+        const STYLES = {
+            'Obsidian': {
+                color: '#4f46e5',
+                render: (ctx, w, h, s) => {
+                    const bg = ctx.createLinearGradient(0, 0, w, h);
+                    bg.addColorStop(0, '#020205');
+                    bg.addColorStop(0.5, '#050a1f');
+                    bg.addColorStop(1, '#020205');
+                    ctx.fillStyle = bg;
+                    ctx.fillRect(0,0,w,h);
+
+                    ctx.globalCompositeOperation = 'screen';
+                    for(let i=0; i<15; i++) {
+                        const x = sRandom(s + i) * w;
+                        const y = sRandom(s + i * 1.5) * h;
+                        const size = sRandom(s + i * 2) * w * 1.0;
+                        const grad = ctx.createRadialGradient(x, y, 0, x, y, size);
+                        const hue = (sRandom(s) * 360 + i * 25) % 360;
+                        grad.addColorStop(0, `hsla(${hue}, 100%, 65%, 0.5)`);
+                        grad.addColorStop(0.4, `hsla(${hue}, 100%, 40%, 0.2)`);
+                        grad.addColorStop(1, 'transparent');
+                        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.arc(x, y, size, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+            },
+            'Solaris': {
+                color: '#fbbf24',
+                render: (ctx, w, h, s) => {
+                    ctx.fillStyle = '#0a0200';
+                    ctx.fillRect(0,0,w,h);
+                    const cx = w/2, cy = h/2;
+                    ctx.globalCompositeOperation = 'lighter';
+                    for(let i=0; i<8; i++) {
+                        const r = (w * 0.1) + sRandom(s+i) * w * 0.7;
+                        const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, r);
+                        const hVal = (15 + sRandom(s+i) * 50) % 360;
+                        g.addColorStop(0, `hsla(${hVal}, 100%, 75%, 0.4)`);
+                        g.addColorStop(0.5, `hsla(${hVal}, 100%, 55%, 0.1)`);
+                        g.addColorStop(1, 'transparent');
+                        ctx.fillStyle = g;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+            },
+            'Aurora': {
+                color: '#14b8a6',
+                render: (ctx, w, h, s) => {
+                    ctx.fillStyle = '#00020a';
+                    ctx.fillRect(0,0,w,h);
+                    ctx.globalCompositeOperation = 'screen';
+                    for(let i=0; i<4; i++) {
+                        ctx.beginPath();
+                        const hue = (sRandom(s) * 360 + i * 45) % 360;
+                        const g = ctx.createLinearGradient(0, 0, 0, h);
+                        g.addColorStop(0, 'transparent');
+                        g.addColorStop(0.4, `hsla(${hue}, 100%, 65%, 0.35)`);
+                        g.addColorStop(0.6, `hsla(${hue}, 100%, 55%, 0.35)`);
+                        g.addColorStop(1, 'transparent');
+                        ctx.fillStyle = g;
+                        
+                        let x = -200;
+                        let y = h * (0.2 + i * 0.15);
+                        ctx.moveTo(x, y);
+                        for(let j=0; j<=12; j++) {
+                            const tx = (j/12) * (w + 400);
+                            const ty = y + Math.sin(s + j * 0.8 + i) * 150;
+                            ctx.lineTo(tx, ty);
+                        }
+                        ctx.lineTo(w + 200, h);
+                        ctx.lineTo(-200, h);
+                        ctx.fill();
+                    }
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+            },
+            'Vortex': {
+                color: '#a855f7',
+                render: (ctx, w, h, s) => {
+                    const cx = w/2, cy = h/2;
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.lineWidth = 1.5;
+                    for(let i=0; i<80; i++) {
+                        const angle = i * 0.15 + s;
+                        const r = i * (w/60);
+                        const hue = (s * 360 + i * 2) % 360;
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 75%, 0.4)`;
+                        ctx.beginPath();
+                        ctx.moveTo(cx + Math.cos(angle) * r, cy + Math.sin(angle) * r);
+                        ctx.lineTo(cx + Math.cos(angle + 0.8) * (r + 100), cy + Math.sin(angle + 0.8) * (r + 100));
+                        ctx.stroke();
+                    }
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+            },
+            'Nova': {
+                color: '#f43f5e',
+                render: (ctx, w, h, s) => {
+                    ctx.fillStyle = '#050002';
+                    ctx.fillRect(0,0,w,h);
+                    ctx.globalCompositeOperation = 'screen';
+                    for(let i=0; i<40; i++) {
+                        const x = sRandom(s + i) * w;
+                        const y = sRandom(s + i * 3) * h;
+                        const r = sRandom(s + i * 5) * 4;
+                        const hue = (sRandom(s) * 360 + i * 5) % 360;
+                        ctx.fillStyle = `hsla(${hue}, 100%, 85%, ${0.5 + sRandom(s+i)*0.5})`;
+                        ctx.beginPath();
+                        ctx.arc(x, y, r, 0, Math.PI*2);
+                        ctx.fill();
+                        
+                        // Glow around star
+                        const glow = ctx.createRadialGradient(x,y,0,x,y,r*10);
+                        glow.addColorStop(0, `hsla(${hue}, 100%, 65%, 0.3)`);
+                        glow.addColorStop(1, 'transparent');
+                        ctx.fillStyle = glow;
+                        ctx.fillRect(x-r*10, y-r*10, r*20, r*20);
+                    }
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+            },
+            'Liquid': {
+                color: '#ec4899',
+                render: (ctx, w, h, s) => {
+                    ctx.globalCompositeOperation = 'screen';
+                    for(let i=0; i<10; i++) {
+                        ctx.beginPath();
+                        const x = sRandom(s+i) * w;
+                        const y = sRandom(s+i*1.2) * h;
+                        const r = sRandom(s+i*1.5) * w * 0.7;
+                        const g = ctx.createRadialGradient(x, y, 0, x, y, r);
+                        const hue = (sRandom(s)*360 + i * 30) % 360;
+                        g.addColorStop(0, `hsla(${hue}, 100%, 65%, 0.4)`);
+                        g.addColorStop(0.5, `hsla(${hue}, 100%, 45%, 0.1)`);
+                        g.addColorStop(1, 'transparent');
+                        ctx.fillStyle = g;
+                        ctx.arc(x,y,r,0, Math.PI*2);
+                        ctx.fill();
+                    }
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+            },
+            'Flow': {
+                color: '#3b82f6',
+                render: (ctx, w, h, s) => {
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.lineWidth = 2;
+                    for(let i=0; i<40; i++) {
+                        let x = sRandom(s+i) * w;
+                        let y = sRandom(s+i*2) * h;
+                        const hue = (s * 360 + i * 10) % 360;
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 75%, 0.3)`;
+                        ctx.beginPath();
+                        ctx.moveTo(x, y);
+                        for(let j=0; j<20; j++) {
+                            const angle = Math.sin(x * 0.003 + s) * 5 + Math.cos(y * 0.003 + s) * 5;
+                            x += Math.cos(angle) * 50;
+                            y += Math.sin(angle) * 50;
+                            ctx.lineTo(x, y);
+                        }
+                        ctx.stroke();
+                    }
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+            },
+            'Prism': {
+                color: '#e2e8f0',
+                render: (ctx, w, h, s) => {
+                    ctx.globalCompositeOperation = 'lighter';
+                    for(let i=0; i<25; i++) {
+                        const hue = (sRandom(s+i) * 360);
+                        ctx.strokeStyle = `hsla(${hue}, 100%, 85%, 0.25)`;
+                        ctx.lineWidth = 2 + sRandom(s+i)*5;
+                        ctx.beginPath();
+                        ctx.moveTo(sRandom(s+i)*w, 0);
+                        ctx.lineTo(sRandom(s+i+5)*w, h);
+                        ctx.stroke();
+                    }
+                    ctx.globalCompositeOperation = 'source-over';
+                }
+            }
+        };
+
+        function resize() {
+            const dpr = window.devicePixelRatio || 1;
+            width = window.innerWidth;
+            height = window.innerHeight;
+            canvas.width = width * dpr;
+            canvas.height = height * dpr;
+            canvas.style.width = width + 'px';
+            canvas.style.height = height + 'px';
+            ctx.scale(dpr, dpr);
+        }
+
+        function createUI() {
+            const keys = Object.keys(STYLES);
+            [ {el: scroll1, id: 1}, {el: scroll2, id: 2} ].forEach(row => {
+                row.el.innerHTML = '';
+                keys.forEach(key => {
+                    const card = document.createElement('div');
+                    const active = (row.id === 1 && key === selected1) || (row.id === 2 && key === selected2);
+                    card.className = `style-card glass p-6 rounded-[2.5rem] flex flex-col items-center justify-center cursor-pointer pointer-events-auto ${active ? 'active' : ''}`;
+                    card.innerHTML = `
+                        <div class="w-12 h-12 rounded-2xl mb-4 shadow-2xl border-2 border-white/20" style="background: ${STYLES[key].color}; box-shadow: 0 10px 30px ${STYLES[key].color}66"></div>
+                        <span class="text-[9px] font-black uppercase tracking-[0.25em] opacity-90">${key}</span>
+                    `;
+                    card.onclick = () => {
+                        if(row.id === 1) { selected1 = key; document.getElementById('label1').innerText = key; }
+                        else { selected2 = key; document.getElementById('label2').innerText = key; }
+                        createUI();
+                        generate();
+                    };
+                    row.el.appendChild(card);
+                });
+            });
+        }
+
+        function generate() {
+            const sValue = Math.floor(currentSeed);
+            seedDisplay.innerText = `SEED: #${sValue}`;
+            
+            ctx.clearRect(0, 0, width, height);
+            ctx.globalAlpha = 1.0;
+            
+            // Render Primary
+            STYLES[selected1].render(ctx, width, height, currentSeed);
+            
+            // Render Secondary with Blend
+            ctx.globalAlpha = 0.6;
+            STYLES[selected2].render(ctx, width, height, currentSeed + 5000);
+            
+            // Final Pass: Subtle Vignette (Much lighter now)
+            const v = ctx.createRadialGradient(width/2, height/2, 0, width/2, height/2, Math.max(width, height));
+            v.addColorStop(0, 'transparent');
+            v.addColorStop(1, 'rgba(0,0,0,0.15)');
+            ctx.fillStyle = v;
+            ctx.globalAlpha = 1.0;
+            ctx.fillRect(0,0,width,height);
+        }
+
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('clock').innerText = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false });
+            document.getElementById('date').innerText = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
+        }
+
+        randomizeBtn.onclick = () => {
+            currentSeed = Math.random() * 99999;
+            generate();
+        };
+
+        downloadBtn.onclick = () => {
+            const link = document.createElement('a');
+            link.download = `VividArt_#${Math.floor(currentSeed)}.png`;
+            link.href = canvas.toDataURL('image/png', 1.0);
+            link.click();
+        };
+
+        previewBtn.onclick = (e) => {
+            e.stopPropagation();
+            document.body.classList.add('preview-active');
+            exitHint.style.opacity = '1';
+        };
+
+        window.onclick = () => {
+            if(document.body.classList.contains('preview-active')) {
+                document.body.classList.remove('preview-active');
+                exitHint.style.opacity = '0';
+            }
+        };
+
+        window.onload = () => {
+            resize();
+            createUI();
+            generate();
+            updateTime();
+            setInterval(updateTime, 1000);
+        };
+
+        window.onresize = () => {
+            resize();
+            generate();
+        };
+        if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.register("/sw.js");
 }
-c.globalCompositeOperation="source-over";
-}},
-
-Solaris:{render:(c,w,h,s)=>{
-c.fillStyle="#120500";c.fillRect(0,0,w,h);
-c.globalCompositeOperation="lighter";
-for(let i=0;i<10;i++){
-const r=w*(.15+rand(s+i)*.7);
-const g=c.createRadialGradient(w/2,h/2,0,w/2,h/2,r);
-g.addColorStop(0,`hsla(${20+rand(s+i)*40},100%,75%,.55)`);
-g.addColorStop(.6,"transparent");
-c.fillStyle=g;c.beginPath();c.arc(w/2,h/2,r,0,Math.PI*2);c.fill();
-}
-c.globalCompositeOperation="source-over";
-}},
-
-Aurora:{render:(c,w,h,s)=>{
-c.fillStyle="#020814";c.fillRect(0,0,w,h);
-c.globalCompositeOperation="screen";
-for(let i=0;i<5;i++){
-const hue=(rand(s)*360+i*50)%360;
-const g=c.createLinearGradient(0,0,0,h);
-g.addColorStop(0,"transparent");
-g.addColorStop(.4,`hsla(${hue},100%,70%,.45)`);
-g.addColorStop(.6,`hsla(${hue},100%,60%,.45)`);
-g.addColorStop(1,"transparent");
-c.fillStyle=g;c.beginPath();
-let y=h*(.2+i*.15);
-c.moveTo(-200,y);
-for(let j=0;j<12;j++){
-c.lineTo((j/12)*(w+400),y+Math.sin(s+j+i)*160);
-}
-c.lineTo(w+200,h);c.lineTo(-200,h);c.fill();
-}
-c.globalCompositeOperation="source-over";
-}},
-
-Vortex:{render:(c,w,h,s)=>{
-c.globalCompositeOperation="lighter";
-for(let i=0;i<90;i++){
-const r=i*(w/60);
-const a=i*.15+s;
-const hue=(s*360+i*3)%360;
-c.strokeStyle=`hsla(${hue},100%,78%,.5)`;
-c.beginPath();
-c.moveTo(w/2+Math.cos(a)*r,h/2+Math.sin(a)*r);
-c.lineTo(w/2+Math.cos(a+.8)*(r+120),h/2+Math.sin(a+.8)*(r+120));
-c.stroke();
-}
-c.globalCompositeOperation="source-over";
-}},
-
-Nova:{render:(c,w,h,s)=>{
-c.fillStyle="#080004";c.fillRect(0,0,w,h);
-c.globalCompositeOperation="screen";
-for(let i=0;i<50;i++){
-const x=rand(s+i)*w,y=rand(s+i*2)*h;
-const hue=(rand(s)*360+i*6)%360;
-c.fillStyle=`hsla(${hue},100%,85%,.8)`;
-c.beginPath();c.arc(x,y,rand(s+i)*5+1,0,Math.PI*2);c.fill();
-}
-c.globalCompositeOperation="source-over";
-}},
-
-Liquid:{render:(c,w,h,s)=>{
-c.globalCompositeOperation="screen";
-for(let i=0;i<12;i++){
-const x=rand(s+i)*w,y=rand(s+i*2)*h;
-const r=rand(s+i*3)*w*.8;
-const hue=(rand(s)*360+i*35)%360;
-const g=c.createRadialGradient(x,y,0,x,y,r);
-g.addColorStop(0,`hsla(${hue},100%,68%,.5)`);
-g.addColorStop(.6,"transparent");
-c.fillStyle=g;c.beginPath();c.arc(x,y,r,0,Math.PI*2);c.fill();
-}
-c.globalCompositeOperation="source-over";
-}},
-
-Flow:{render:(c,w,h,s)=>{
-c.globalCompositeOperation="lighter";
-for(let i=0;i<45;i++){
-let x=rand(s+i)*w,y=rand(s+i*2)*h;
-const hue=(s*360+i*12)%360;
-c.strokeStyle=`hsla(${hue},100%,75%,.35)`;
-c.beginPath();c.moveTo(x,y);
-for(let j=0;j<20;j++){
-x+=Math.cos(y*.002+s)*50;
-y+=Math.sin(x*.002+s)*50;
-c.lineTo(x,y);
-}
-c.stroke();
-}
-c.globalCompositeOperation="source-over";
-}},
-
-Prism:{render:(c,w,h,s)=>{
-c.globalCompositeOperation="lighter";
-for(let i=0;i<30;i++){
-const hue=rand(s+i)*360;
-c.strokeStyle=`hsla(${hue},100%,85%,.35)`;
-c.lineWidth=2+rand(s+i)*5;
-c.beginPath();
-c.moveTo(rand(s+i)*w,0);
-c.lineTo(rand(s+i+5)*w,h);
-c.stroke();
-}
-c.globalCompositeOperation="source-over";
-}}
-
-};
-
-function resize(){
-const dpr=devicePixelRatio||1;
-w=innerWidth;h=innerHeight;
-canvas.width=w*dpr;canvas.height=h*dpr;
-canvas.style.width=w+"px";canvas.style.height=h+"px";
-ctx.setTransform(dpr,0,0,dpr,0,0);
-}
-
-function generate(){
-ctx.clearRect(0,0,w,h);
-
-// 🔥 OLED compensation pass
-ctx.filter=`saturate(${SAT_BOOST}) brightness(${BRI_BOOST}) contrast(${CON_BOOST})`;
-
-STYLES[selected1].render(ctx,w,h,seed);
-ctx.globalAlpha=.65;
-STYLES[selected2].render(ctx,w,h,seed+5000);
-ctx.globalAlpha=1;
-
-const v=ctx.createRadialGradient(w/2,h/2,0,w/2,h/2,Math.max(w,h));
-v.addColorStop(0,"transparent");
-v.addColorStop(1,"rgba(0,0,0,.08)");
-ctx.fillStyle=v;ctx.fillRect(0,0,w,h);
-
-ctx.filter="none";
-}
-
-window.onload=()=>{resize();generate();}
-window.onresize=()=>{resize();generate();}
-</script>
+    </script>
 </body>
 </html>
